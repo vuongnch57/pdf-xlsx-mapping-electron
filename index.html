@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tạo file PDF thông tin đơn hàng - SKUs</title>
+    <script defer src="renderer.js"></script>
+    <style>
+      body {
+        background-color: black;
+        width: 100%;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: white;
+      }
+
+      .container {
+        padding: 20px;
+        border: 1px solid gray;
+        border-radius: 5px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      h1 {
+        text-align: center;
+        font-size: 3rem;
+      }
+
+      button {
+        margin: 10px;
+        padding: 10px 20px;
+        font-size: 1rem;
+      }
+
+      p {
+        margin: 5px 0;
+      }
+
+      select {
+        padding: 5px 10px;
+        font-size: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Tạo file PDF thông tin đơn hàng - SKUs</h1>
+
+      <div style="display: flex; align-items: center; margin-bottom: 30px">
+        <label for="platform" style="margin-right: 10px">Chọn nền tảng:</label>
+        <select id="platform">
+          <option value="shopee" selected>Shopee</option>
+          <option value="tiktok">TikTok</option>
+        </select>
+      </div>
+
+      <button id="selectPdf">Tải lên file PDF đơn hàng</button>
+      <p id="pdfPath"></p>
+
+      <button id="selectXlsm">
+        Tải lên file Excel thông tin đơn hàng và SKU
+      </button>
+      <p id="xlsmPath"></p>
+
+      <button id="processFiles">Bắt đầu</button>
+      <p id="outputMessage"></p>
+    </div>
+  </body>
+</html>

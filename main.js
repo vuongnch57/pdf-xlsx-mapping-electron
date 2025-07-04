@@ -65,6 +65,9 @@ ipcMain.handle("process-files", async (event, pdfPaths, xlsmPath, platform) => {
             if(lines[j].includes("Order ID:")) {
               orderId = lines[j + 1];
               break;
+            } else if(lines[j].includes("TT số thứ tự :")) {
+              orderId = `${lines[j + 3]}_BEST`;
+              break;
             }
           }
           if (orderId) break;
@@ -104,33 +107,34 @@ ipcMain.handle("process-files", async (event, pdfPaths, xlsmPath, platform) => {
       const pages = pdfDoc.getPages();
 
       orderIdsPerPage.forEach(({ pageIndex, orderId }) => {
-        if (orderId && skuMapping[orderId]) {
+        const realOrderId = orderId.includes("BEST") ? orderId.split("_")[0] : orderId;
+        if (realOrderId && skuMapping[realOrderId]) {
           let page = pages[pageIndex];
-          const skus = skuMapping[orderId];
+          const skus = skuMapping[realOrderId];
 
           let { width, height } = page.getSize();
           // Define box position and size
-          const boxPos = platform === "shopee" ? 230 : 295;
-          const boxX = 10;
+          const boxPos = platform === "shopee" ? 230 : orderId.includes("BEST") ? 313 : 295;
+          const boxX = orderId.includes("BEST") ? 12 : 10;
           const boxY = height - boxPos;
-          const boxHeight = 110; // Adjust height based on SKU count
+          const boxHeight = orderId.includes("BEST") ? 58 : 110; // Adjust height based on SKU count
 
           page.drawRectangle({
             x: boxX,
             y: boxY - boxHeight, // Align box properly
-            width: 200,
+            width: orderId.includes("BEST") ? 190 : 200,
             height: boxHeight,
             color: rgb(1.0, 1.0, 1.0), // Light blue
             opacity: 1, // Transparency for blur effect
           });
 
-          let textY = boxY - 20;
+          let textY = boxY - 10;
 
           skus.forEach((sku, skuIdx) => {
             page.drawText(`${skuIdx + 1}. ${sku.trim()}`, {
               x: boxX + 10,
               y: textY,
-              size: 10,
+              size: 8,
               color: rgb(0, 0, 0),
             });
             textY -= 15;

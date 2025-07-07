@@ -46,26 +46,56 @@ ipcMain.handle("process-files", async (event, pdfPaths, xlsmPath, platform) => {
 
       // Extract Order IDs
       const data = await pdfParse(pdfBuffer);
-      const pagesText = data.text
+      console.log("Extracted PDF Text:", data.text);
+      let pagesText = data.text
         .split(/\n\s*\n/)
         .filter((page) => page.trim().length > 0);
+
+      // Special handling for tiktok: merge pages without "Order ID:" or "TT số thứ tự :" with the next page that has one
+      if (platform === "tiktok") {
+        let mergedPages = [];
+        let buffer = "";
+
+        for (let i = 0; i < pagesText.length; i++) {
+          const page = pagesText[i];
+          const hasOrderId =
+            page.includes("Order ID:") || page.includes("TT số thứ tự :");
+
+          if (!hasOrderId) {
+            buffer += (buffer ? "\n\n" : "") + page;
+          } else {
+            if (buffer) {
+              mergedPages.push(buffer + "\n\n" + page);
+              buffer = "";
+            } else {
+              mergedPages.push(page);
+            }
+          }
+        }
+        // If buffer remains at the end, push it as a page
+        if (buffer) mergedPages.push(buffer);
+        pagesText = mergedPages;
+      }
       console.log("Pages Text:", pagesText);
       let orderIdsPerPage = [];
       for (let i = 0; i < pagesText.length; i++) {
         let orderId = null;
+        // if(i > 15) {
+        //   console.log(`page ${i + 1}`, pagesText[i]);
+        // }
         const lines = pagesText[i].split("\n");
         for (let j = 0; j < lines.length; j++) {
-          if(platform === "shopee") {
+          if (platform === "shopee") {
             const match = lines[j].match(/\b(\d[\w\d]+)\b/); // Order ID must start with a digit
             if (match && match[1].length === 14) {
               orderId = match[1];
               break;
             }
           } else {
-            if(lines[j].includes("Order ID:")) {
+            if (lines[j].includes("Order ID:")) {
               orderId = lines[j + 1];
               break;
-            } else if(lines[j].includes("TT số thứ tự :")) {
+            } else if (lines[j].includes("TT số thứ tự :")) {
               orderId = `${lines[j + 3]}_BEST`;
               break;
             }
@@ -107,14 +137,18 @@ ipcMain.handle("process-files", async (event, pdfPaths, xlsmPath, platform) => {
       const pages = pdfDoc.getPages();
 
       orderIdsPerPage.forEach(({ pageIndex, orderId }) => {
-        const realOrderId = orderId.includes("BEST") ? orderId.split("_")[0] : orderId;
+        const realOrderId = orderId.includes("BEST")
+          ? orderId.split("_")[0]
+          : orderId;
         if (realOrderId && skuMapping[realOrderId]) {
           let page = pages[pageIndex];
+          if (!page) return;
           const skus = skuMapping[realOrderId];
 
           let { width, height } = page.getSize();
           // Define box position and size
-          const boxPos = platform === "shopee" ? 230 : orderId.includes("BEST") ? 313 : 295;
+          const boxPos =
+            platform === "shopee" ? 230 : orderId.includes("BEST") ? 313 : 295;
           const boxX = orderId.includes("BEST") ? 12 : 10;
           const boxY = height - boxPos;
           const boxHeight = orderId.includes("BEST") ? 58 : 110; // Adjust height based on SKU count
@@ -134,7 +168,7 @@ ipcMain.handle("process-files", async (event, pdfPaths, xlsmPath, platform) => {
             page.drawText(`${skuIdx + 1}. ${sku.trim()}`, {
               x: boxX + 10,
               y: textY,
-              size: 8,
+              size: 10,
               color: rgb(0, 0, 0),
             });
             textY -= 15;
@@ -152,7 +186,10 @@ ipcMain.handle("process-files", async (event, pdfPaths, xlsmPath, platform) => {
 
     // Save modified PDF
     const hash = new Date().getTime();
-    const outputPath = path.join(app.getPath("desktop"), `Invoices_${hash}.pdf`);
+    const outputPath = path.join(
+      app.getPath("desktop"),
+      `Invoices_${hash}.pdf`
+    );
     fs.writeFileSync(outputPath, await combinedPdfDoc.save());
     return outputPath;
   } catch (error) {
